@@ -9,4 +9,8 @@ object InputReader {
 
   def listOfInts(fileName: String): Try[List[Int]] =
     getLines(fileName).map(_.toList map (_.toInt))
+
+  def listOfIntVecs(fileName: String, delimiter: Char): Try[List[Vector[Int]]] =
+    getLines(fileName)
+      .map(_.map(_.split(delimiter).map(_.toInt).toVector).toList)
 }
