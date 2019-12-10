@@ -38,6 +38,15 @@ object OperationAt {
 }
 
 object ProgramAlarm {
+  def setNounAndVerb(
+      noun: Int,
+      verb: Int,
+      instructions: Vector[Int]
+  ): Vector[Int] = {
+    val withNoun = instructions.updated(1, noun)
+    withNoun.updated(2, verb)
+  }
+
   def execute(instructions: Vector[Int]): Vector[Int] = {
 
     @tailrec
