@@ -59,9 +59,4 @@ object PathFinder {
 
   def findInteresections(path1: Path, path2: Path): Seq[Point] =
     path1.intersect(path2)
-
-  def distanceToClosest(target: Point, points: Seq[Point]): Int =
-    points.map { point =>
-      (point.x - target.x).abs + (point.y - target.y).abs
-    }.min
 }
