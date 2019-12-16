@@ -2,7 +2,7 @@ package advent_of_code.day_5
 
 import advent_of_code.utils.InputReader
 
-object RunTESTDiagnistic extends App {
+object RunTESTDiagnostic extends App {
   println(
     InputReader
       .listOfIntVecs("day_5.txt", ',')
