@@ -26,4 +26,31 @@ class OrbitMapperTest extends org.scalatest.FunSuite {
       OrbitMapper.totalOrbits(planets) == 42
     )
   }
+
+  test(
+    "Returns correct number of transfers for test input"
+  ) {
+
+    val planets = OrbitMapper
+      .parseInput(
+        List(
+          "COM)B",
+          "B)C",
+          "C)D",
+          "D)E",
+          "E)F",
+          "B)G",
+          "G)H",
+          "D)I",
+          "E)J",
+          "J)K",
+          "K)L",
+          "K)YOU",
+          "I)SAN"
+        )
+      )
+    assert(
+      OrbitMapper.numberOfTransfers("YOU", "SAN", planets) == 4
+    )
+  }
 }

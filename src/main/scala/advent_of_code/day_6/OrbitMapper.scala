@@ -44,4 +44,17 @@ object OrbitMapper {
     planets.foldLeft(0) {
       case (sum, (key, _)) => sum + ancestors(key, planets).length
     }
+
+  def numberOfTransfers(
+      dest: String,
+      target: String,
+      planets: Map[String, ParsedNode]
+  ): Int = {
+    val destAncestors = ancestors(dest, planets)
+    val targAncestors = ancestors(target, planets)
+
+    val samePath = destAncestors.intersect(targAncestors)
+
+    (destAncestors.length - samePath.length) + (targAncestors.length - samePath.length)
+  }
 }
