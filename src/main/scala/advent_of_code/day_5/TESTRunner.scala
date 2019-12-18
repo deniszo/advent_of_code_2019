@@ -107,6 +107,12 @@ object OperationAt {
   }
 }
 
+private case class ProgramState(
+    instructions: Vector[Int],
+    inputs: List[Int],
+    outputs: Vector[Int] = Vector.empty
+)
+
 object TESTRunner {
   def setNounAndVerb(
       noun: Int,
@@ -118,109 +124,107 @@ object TESTRunner {
   }
 
   def execute(
-      input: Int,
+      inputs: List[Int],
       instructions: Vector[Int]
   ): (Vector[Int], Vector[Int]) = {
 
     @tailrec
     def walkRec(
         currentPos: Int,
-        currentState: (Vector[Int], Vector[Int])
-    ): (Vector[Int], Vector[Int]) = {
-      val (state, outputs) = currentState
-      OperationAt(currentPos, state) match {
+        state: ProgramState
+    ): ProgramState = {
+      val ProgramState(instructions, inputs, outputs) = state
+
+      OperationAt(currentPos, instructions) match {
         case Add(a, b, modifiedAt, nextPos) =>
           walkRec(
             if (modifiedAt == currentPos) currentPos else nextPos,
-            (
-              state.updated(
+            state.copy(
+              instructions = instructions.updated(
                 modifiedAt,
                 a + b
-              ),
-              outputs
+              )
             )
           )
 
         case Mul(a, b, modifiedAt, nextPos) =>
           walkRec(
             if (modifiedAt == currentPos) currentPos else nextPos,
-            (
-              state.updated(
+            state.copy(
+              instructions = instructions.updated(
                 modifiedAt,
                 a * b
-              ),
-              outputs
+              )
             )
           )
 
         case JumpIfTrue(cond, goTo, nextPos) => {
-          println(s"JumpIfTrue's cond is $cond")
-          if (cond == 0) walkRec(nextPos, currentState)
+          if (cond == 0) walkRec(nextPos, state)
           else
             walkRec(
               goTo,
-              currentState
+              state
             )
         }
 
         case JumpIfFalse(cond, goTo, nextPos) =>
-          if (cond != 0) walkRec(nextPos, currentState)
+          if (cond != 0) walkRec(nextPos, state)
           else
             walkRec(
               goTo,
-              currentState
+              state
             )
 
         case LessThan(a, b, modifiedAt, nextPos) =>
           walkRec(
             if (modifiedAt == currentPos) currentPos else nextPos,
-            (
-              state.updated(
+            state.copy(
+              instructions = instructions.updated(
                 modifiedAt,
                 if (a < b) 1 else 0
-              ),
-              outputs
+              )
             )
           )
 
         case Equals(a, b, modifiedAt, nextPos) =>
           walkRec(
             if (modifiedAt == currentPos) currentPos else nextPos,
-            (
-              state.updated(
+            state.copy(
+              instructions.updated(
                 modifiedAt,
                 if (a == b) 1 else 0
-              ),
-              outputs
+              )
             )
           )
 
         case WriteInput(writeAt, nextPos) =>
           walkRec(
             if (writeAt == currentPos) currentPos else nextPos,
-            (
-              state.updated(
+            state.copy(
+              instructions = instructions.updated(
                 writeAt,
-                input
+                inputs.head
               ),
-              outputs
+              inputs = inputs.tail
             )
           )
 
         case PrintOutput(outputAt, nextPos) =>
           walkRec(
             nextPos,
-            (
-              state,
-              outputs.appended(
-                state(outputAt)
+            state.copy(
+              outputs = outputs.appended(
+                instructions(outputAt)
               )
             )
           )
-        case _ => (state, outputs)
+        case _ => state
       }
     }
 
-    walkRec(0, (instructions, Vector.empty))
+    val ProgramState(modifiedInstructions, _, outputs) =
+      walkRec(0, ProgramState(instructions, inputs))
+
+    (modifiedInstructions, outputs)
   }
 }

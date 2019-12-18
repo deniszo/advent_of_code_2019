@@ -8,7 +8,7 @@ object RunTESTDiagnostic extends App {
       .listOfIntVecs("day_5.txt", ',')
       .map {
         case (inputs :: _) => {
-          TESTRunner.execute(5, inputs)
+          TESTRunner.execute(List(5), inputs)
         }
       }
       .get
