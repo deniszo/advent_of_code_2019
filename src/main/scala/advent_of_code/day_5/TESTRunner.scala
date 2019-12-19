@@ -107,10 +107,12 @@ object OperationAt {
   }
 }
 
-private case class ProgramState(
+case class ProgramState(
     instructions: Vector[Int],
     inputs: List[Int],
-    outputs: Vector[Int] = Vector.empty
+    outputs: Vector[Int] = Vector.empty,
+    currentPos: Int = 0,
+    halted: Boolean = false
 )
 
 object TESTRunner {
@@ -123,6 +125,90 @@ object TESTRunner {
     withNoun.updated(2, verb)
   }
 
+  def executeStep(state: ProgramState): ProgramState = {
+    val ProgramState(instructions, inputs, outputs, currentPos, _) = state
+
+    OperationAt(currentPos, instructions) match {
+      case Add(a, b, modifiedAt, nextPos) =>
+        state.copy(
+          instructions = instructions.updated(
+            modifiedAt,
+            a + b
+          ),
+          currentPos = if (modifiedAt == currentPos) currentPos else nextPos
+        )
+
+      case Mul(a, b, modifiedAt, nextPos) =>
+        state.copy(
+          instructions = instructions.updated(
+            modifiedAt,
+            a * b
+          ),
+          currentPos = if (modifiedAt == currentPos) currentPos else nextPos
+        )
+
+      case JumpIfTrue(cond, goTo, nextPos) => {
+        if (cond == 0) state.copy(currentPos = nextPos)
+        else state.copy(currentPos = goTo)
+      }
+
+      case JumpIfFalse(cond, goTo, nextPos) =>
+        if (cond != 0) state.copy(currentPos = nextPos)
+        else state.copy(currentPos = goTo)
+
+      case LessThan(a, b, modifiedAt, nextPos) =>
+        state.copy(
+          instructions = instructions.updated(
+            modifiedAt,
+            if (a < b) 1 else 0
+          ),
+          currentPos = if (modifiedAt == currentPos) currentPos else nextPos
+        )
+
+      case Equals(a, b, modifiedAt, nextPos) =>
+        state.copy(
+          instructions = instructions.updated(
+            modifiedAt,
+            if (a == b) 1 else 0
+          ),
+          currentPos = if (modifiedAt == currentPos) currentPos else nextPos
+        )
+
+      case WriteInput(writeAt, nextPos) => {
+        state.copy(
+          instructions = instructions.updated(
+            writeAt,
+            inputs.head
+          ),
+          inputs = inputs.tail,
+          currentPos = if (writeAt == currentPos) currentPos else nextPos
+        )
+      }
+
+      case PrintOutput(outputAt, nextPos) =>
+        state.copy(
+          outputs = outputs.appended(
+            instructions(outputAt)
+          ),
+          currentPos = nextPos
+        )
+
+      case Halt => state.copy(halted = true)
+    }
+  }
+
+  def runTillNextOutput(initialState: ProgramState): ProgramState = {
+
+    @tailrec
+    def loop(newState: ProgramState): ProgramState = {
+      if (newState.halted || newState.outputs.length > initialState.outputs.length)
+        newState
+      else loop(executeStep(newState))
+    }
+
+    loop(initialState)
+  }
+
   def execute(
       inputs: List[Int],
       instructions: Vector[Int]
@@ -130,101 +216,14 @@ object TESTRunner {
 
     @tailrec
     def walkRec(
-        currentPos: Int,
         state: ProgramState
     ): ProgramState = {
-      val ProgramState(instructions, inputs, outputs) = state
-
-      OperationAt(currentPos, instructions) match {
-        case Add(a, b, modifiedAt, nextPos) =>
-          walkRec(
-            if (modifiedAt == currentPos) currentPos else nextPos,
-            state.copy(
-              instructions = instructions.updated(
-                modifiedAt,
-                a + b
-              )
-            )
-          )
-
-        case Mul(a, b, modifiedAt, nextPos) =>
-          walkRec(
-            if (modifiedAt == currentPos) currentPos else nextPos,
-            state.copy(
-              instructions = instructions.updated(
-                modifiedAt,
-                a * b
-              )
-            )
-          )
-
-        case JumpIfTrue(cond, goTo, nextPos) => {
-          if (cond == 0) walkRec(nextPos, state)
-          else
-            walkRec(
-              goTo,
-              state
-            )
-        }
-
-        case JumpIfFalse(cond, goTo, nextPos) =>
-          if (cond != 0) walkRec(nextPos, state)
-          else
-            walkRec(
-              goTo,
-              state
-            )
-
-        case LessThan(a, b, modifiedAt, nextPos) =>
-          walkRec(
-            if (modifiedAt == currentPos) currentPos else nextPos,
-            state.copy(
-              instructions = instructions.updated(
-                modifiedAt,
-                if (a < b) 1 else 0
-              )
-            )
-          )
-
-        case Equals(a, b, modifiedAt, nextPos) =>
-          walkRec(
-            if (modifiedAt == currentPos) currentPos else nextPos,
-            state.copy(
-              instructions.updated(
-                modifiedAt,
-                if (a == b) 1 else 0
-              )
-            )
-          )
-
-        case WriteInput(writeAt, nextPos) =>
-          walkRec(
-            if (writeAt == currentPos) currentPos else nextPos,
-            state.copy(
-              instructions = instructions.updated(
-                writeAt,
-                inputs.head
-              ),
-              inputs = inputs.tail
-            )
-          )
-
-        case PrintOutput(outputAt, nextPos) =>
-          walkRec(
-            nextPos,
-            state.copy(
-              outputs = outputs.appended(
-                instructions(outputAt)
-              )
-            )
-          )
-        case _ => state
-      }
+      if (state.halted) state
+      else walkRec(executeStep(state))
     }
 
-    val ProgramState(modifiedInstructions, _, outputs) =
-      walkRec(0, ProgramState(instructions, inputs))
+    val finalState = walkRec(ProgramState(instructions, inputs))
 
-    (modifiedInstructions, outputs)
+    (finalState.instructions, finalState.outputs)
   }
 }
